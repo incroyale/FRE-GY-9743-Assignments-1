@@ -107,21 +107,57 @@ class Interpolator1DPCP(Interpolator1D):
                          extrapolation_method)
         assert self.extrap_method_ == ExtrapMethod.FLAT
 
+
     def interpolate(self, x: float) -> float:
-        #TODO
-        pass
+        idx = np.searchsorted(self.axis1_, x, side='left')
+        idx = min(idx, self.length_ - 1)
+        return float(self.values_[idx])
+
 
     def integrate(self, start_x: float, end_x: float) -> float:
-        #TODO
-        pass
+        if start_x == end_x:
+            return 0.0
+        a, b, sign = start_x, end_x, 1.0
+        if a > b:
+            a, b, sign = b, a, -1.0
+
+        breakpoints = self.axis1_[(self.axis1_ > a) & (self.axis1_ < b)]
+        pts = np.concatenate(([a], breakpoints, [b]))
+
+        total = 0.0
+        for i in range(len(pts) - 1):
+            lo, hi = pts[i], pts[i + 1]
+            mid = 0.5 * (lo + hi)
+            total += self.interpolate(mid) * (hi - lo)
+        return sign * total
+
 
     def gradient_wrt_ordinate(self, x: float) -> np.ndarray:
-        #TODO
-        pass
+        idx = np.searchsorted(self.axis1_, x, side='left')
+        idx = min(idx, self.length_ - 1)
+        grad = np.zeros(self.length_)
+        grad[idx] = 1.0
+        return grad
+
 
     def gradient_of_integrated_value_wrt_ordinate(self, start_x: float, end_x: float) -> np.ndarray:
-        #TODO
-        pass
+        if start_x == end_x:
+            return np.zeros(self.length_)
+        a, b, sign = start_x, end_x, 1.0
+        if a > b:
+            a, b, sign = b, a, -1.0
+
+        breakpoints = self.axis1_[(self.axis1_ > a) & (self.axis1_ < b)]
+        pts = np.concatenate(([a], breakpoints, [b]))
+
+        grad = np.zeros(self.length_)
+        for i in range(len(pts) - 1):
+            lo, hi = pts[i], pts[i + 1]
+            mid = 0.5 * (lo + hi)
+            idx = np.searchsorted(self.axis1_, mid, side='left')
+            idx = min(idx, self.length_ - 1)
+            grad[idx] += (hi - lo)
+        return sign * grad
 
 
 class InterpolatorFactory:
